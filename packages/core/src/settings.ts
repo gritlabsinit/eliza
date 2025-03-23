@@ -20,6 +20,45 @@ elizaLogger.debug("Loading character settings:", {
 
 interface Settings {
     [key: string]: string | undefined;
+    // Model settings
+    OPENAI_API_KEY?: string;
+    OPENAI_API_URL?: string;
+    ANTHROPIC_API_KEY?: string;
+    ANTHROPIC_API_URL?: string;
+    GOOGLE_API_KEY?: string;
+    MISTRAL_API_KEY?: string;
+    BEDROCK_REGION?: string;
+    BEDROCK_ACCESS_KEY?: string;
+    BEDROCK_SECRET_KEY?: string;
+
+    // OpenAI models
+    SMALL_OPENAI_MODEL?: string;
+    MEDIUM_OPENAI_MODEL?: string;
+    LARGE_OPENAI_MODEL?: string;
+    EMBEDDING_OPENAI_MODEL?: string;
+    IMAGE_OPENAI_MODEL?: string;
+
+    // Anthropic models
+    SMALL_ANTHROPIC_MODEL?: string;
+    MEDIUM_ANTHROPIC_MODEL?: string;
+    LARGE_ANTHROPIC_MODEL?: string;
+
+    // Mistral models
+    SMALL_MISTRAL_MODEL?: string;
+    MEDIUM_MISTRAL_MODEL?: string;
+    LARGE_MISTRAL_MODEL?: string;
+
+    // PortKey models and settings
+    PORTKEY_API_KEY?: string;
+    PORTKEY_API_URL?: string;
+    SMALL_PORTKEY_MODEL?: string;
+    MEDIUM_PORTKEY_MODEL?: string;
+    LARGE_PORTKEY_MODEL?: string;
+    EMBEDDING_PORTKEY_MODEL?: string;
+
+    // Other settings
+    SYSTEM_PROMPT?: string;
+    // ... other properties
 }
 
 interface NamespacedSettings {

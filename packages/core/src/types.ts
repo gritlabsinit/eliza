@@ -235,6 +235,7 @@ export type Models = {
     [ModelProviderName.ATOMA]: Model;
     [ModelProviderName.SECRETAI]: Model;
     [ModelProviderName.NEARAI]: Model;
+    [ModelProviderName.PORTKEY]: Model;
 };
 
 /**
@@ -276,6 +277,7 @@ export enum ModelProviderName {
     ATOMA = "atoma",
     SECRETAI = "secret_ai",
     NEARAI = "nearai",
+    PORTKEY = "portkey",
 }
 
 /**
@@ -897,16 +899,6 @@ export type Character = {
             messageSimilarityThreshold?: number;
             isPartOfTeam?: boolean;
             teamAgentIds?: string[];
-            teamLeaderId?: string;
-            teamMemberInterestKeywords?: string[];
-            autoPost?: {
-                enabled?: boolean;
-                monitorTime?: number;
-                inactivityThreshold?: number;
-                mainChannelId?: string;
-                pinnedMessagesGroups?: string[];
-                minTimeBetweenPosts?: number;
-            };
         };
         slack?: {
             shouldIgnoreBotMessages?: boolean;
@@ -918,6 +910,9 @@ export type Character = {
                 generalQueries?: string[];
             };
             documentTriggers?: string[];
+        };
+        portkey?: {
+            config?: string;
         };
     };
 

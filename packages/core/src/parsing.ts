@@ -3,7 +3,7 @@ const jsonBlockPattern = /```json\n([\s\S]*?)\n```/;
 
 export const messageCompletionFooter = `\nResponse format should be formatted in a valid JSON block like this:
 \`\`\`json
-{ "user": "{{agentName}}", "text": "<string>", "action": "<string>" }
+{ "user": "{{agentName}}", "text": "{{responseFormat}}", "action": "<string>" }
 \`\`\`
 
 The “action” field should be one of the options in [Available Actions] and the "text" field should be the response you want to send.
@@ -153,6 +153,28 @@ export function parseJSONObjectFromText(
         } catch (e) {
             console.error("Error parsing JSON:", e);
             console.error("Text is not JSON", text);
+            
+            // Try to fix nested JSON strings that aren't properly escaped
+            try {
+                // Replace problematic patterns where JSON strings aren't properly escaped
+                const fixedText = parsingText.replace(/"text":\s*"({.*?})"/g, (match, p1) => {
+                    // p1 contains the inner JSON string - escape its quotes
+                    return `"text": ${p1.replace(/"/g, '\\"')}`;
+                });
+                
+                // If we've modified the text, try parsing again
+                if (fixedText !== parsingText) {
+                    try {
+                        jsonData = JSON.parse(fixedText);
+                        return jsonData;
+                    } catch (e2) {
+                        console.error("Error parsing fixed JSON:", e2);
+                    }
+                }
+            } catch (fixError) {
+                console.error("Error fixing nested JSON:", fixError);
+            }
+            
             return extractAttributes(text);
         }
     } else {
@@ -167,6 +189,28 @@ export function parseJSONObjectFromText(
             } catch (e) {
                 console.error("Error parsing JSON:", e);
                 console.error("Text is not JSON", text);
+                
+                // Try to fix nested JSON strings that aren't properly escaped
+                try {
+                    // Replace problematic patterns where JSON strings aren't properly escaped
+                    const fixedText = parsingText.replace(/"text":\s*"({.*?})"/g, (match, p1) => {
+                        // p1 contains the inner JSON string - properly format it
+                        return `"text": ${p1}`;
+                    });
+                    
+                    // If we've modified the text, try parsing again
+                    if (fixedText !== parsingText) {
+                        try {
+                            jsonData = JSON.parse(fixedText);
+                            return jsonData;
+                        } catch (e2) {
+                            console.error("Error parsing fixed JSON:", e2);
+                        }
+                    }
+                } catch (fixError) {
+                    console.error("Error fixing nested JSON:", fixError);
+                }
+                
                 return extractAttributes(text);
             }
         }
@@ -267,11 +311,33 @@ export const normalizeJsonString = (str: string) => {
  */
 
 export function cleanJsonResponse(response: string): string {
-    return response
+    // First remove markdown code blocks
+    let cleanedResponse = response
         .replace(/```json\s*/g, "") // Remove ```json
         .replace(/```\s*/g, "") // Remove any remaining ```
-        .replace(/(\r\n|\n|\r)/g, "") // Remove line breaks
         .trim();
+    
+    // Check for nested JSON in text field that might need fixing
+    const nestedJsonPattern = /"text"\s*:\s*"({.*?})"/g;
+    if (nestedJsonPattern.test(cleanedResponse)) {
+        try {
+            // Try to fix nested JSON by properly formatting it
+            cleanedResponse = cleanedResponse.replace(nestedJsonPattern, (match, p1) => {
+                // If the nested content looks like JSON but is inside quotes, fix it
+                if (p1.includes(":") && (p1.includes("{") || p1.includes("["))) {
+                    return `"text": ${p1}`;
+                }
+                return match;
+            });
+        } catch (e) {
+            console.error("Error fixing nested JSON in cleanJsonResponse:", e);
+        }
+    }
+    
+    // Now remove line breaks (after handling nested JSON)
+    cleanedResponse = cleanedResponse.replace(/(\r\n|\n|\r)/g, "");
+    
+    return cleanedResponse;
 }
 
 export const postActionResponseFooter = `Choose any combination of [LIKE], [RETWEET], [QUOTE], and [REPLY] that are appropriate. Each action must be on its own line. Your response must only include the chosen actions.`;

@@ -1221,6 +1221,42 @@ export const models: Models = {
             },
         },
     },
+    [ModelProviderName.PORTKEY]: {
+        endpoint: settings.PORTKEY_API_URL || "https://api.portkey.ai/v1",
+        model: {
+            [ModelClass.SMALL]: {
+                name: settings.SMALL_PORTKEY_MODEL || "openai/gpt-4o-mini",
+                stop: [],
+                maxInputTokens: 128000,
+                maxOutputTokens: 4096,
+                frequency_penalty: 0.0,
+                presence_penalty: 0.0,
+                temperature: 0.7,
+            },
+            [ModelClass.MEDIUM]: {
+                name: settings.MEDIUM_PORTKEY_MODEL || "openai/gpt-4o",
+                stop: [],
+                maxInputTokens: 128000,
+                maxOutputTokens: 4096,
+                frequency_penalty: 0.0,
+                presence_penalty: 0.0,
+                temperature: 0.7,
+            },
+            [ModelClass.LARGE]: {
+                name: settings.LARGE_PORTKEY_MODEL || "anthropic/claude-3-opus-20240229",
+                stop: [],
+                maxInputTokens: 200000,
+                maxOutputTokens: 4096,
+                frequency_penalty: 0.0,
+                presence_penalty: 0.0,
+                temperature: 0.7,
+            },
+            [ModelClass.EMBEDDING]: {
+                name: settings.EMBEDDING_PORTKEY_MODEL || "openai/text-embedding-3-small",
+                dimensions: 1536,
+            },
+        },
+    },
 };
 
 export function getModelSettings(

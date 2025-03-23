@@ -281,6 +281,7 @@ export class DirectClient {
 
                 let state = await runtime.composeState(userMessage, {
                     agentName: runtime.character.name,
+                    responseFormat: req.body.responseFormat ?? "<string>",
                 });
 
                 const context = composeContext({
@@ -505,6 +506,14 @@ export class DirectClient {
                     context,
                     modelClass: ModelClass.SMALL, // 1s processing time on openai small
                     schema: hyperfiOutSchema,
+                    modelOptions: {
+                        // Provide default model settings
+                        temperature: 0.7,
+                        frequencyPenalty: 0.0,
+                        presencePenalty: 0.0,
+                        maxTokens: 2048,
+                        prompt: ""  // This is required by the interface but will be overridden by the context parameter
+                    }
                 });
 
                 if (!response) {
@@ -752,7 +761,8 @@ export class DirectClient {
             if (!runtime) {
                 runtime = Array.from(this.agents.values()).find(
                     (a) =>
-                        a.character.name.toLowerCase() === agentId.toLowerCase()
+                        a.character.name.toLowerCase() ===
+                        agentId.toLowerCase()
                 );
             }
 
@@ -814,10 +824,13 @@ export class DirectClient {
                 });
 
                 // save response to memory
-                const responseMessage = {
+                const responseMessage: Memory = {
+                    id: stringToUuid(messageId + "-" + runtime.agentId),
                     ...userMessage,
                     userId: runtime.agentId,
                     content: response,
+                    embedding: getEmbeddingZeroVector(),
+                    createdAt: Date.now(),
                 };
 
                 await runtime.messageManager.createMemory(responseMessage);

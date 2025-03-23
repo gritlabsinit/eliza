@@ -1226,7 +1226,7 @@ export async function generateText({
 
             case ModelProviderName.DEEPSEEK: {
                 elizaLogger.debug("Initializing Deepseek model.");
-                const serverUrl = models[provider].endpoint;
+                const serverUrl = getEndpoint(provider);
                 const deepseek = createOpenAI({
                     apiKey,
                     baseURL: serverUrl,
@@ -1358,6 +1358,52 @@ export async function generateText({
 
                 response = bedrockResponse;
                 elizaLogger.debug("Received response from Bedrock model.");
+                break;
+            }
+
+            case ModelProviderName.PORTKEY: {
+                elizaLogger.debug("Initializing PortKey model.");
+
+                const portkeyConfig = runtime.character.clientConfig?.portkey?.config;
+                const headers: Record<string, string> = {
+                    "x-portkey-api-key": apiKey,
+                    "x-portkey-mode": "fallback", // Enable fallback mode for reliability
+                    "x-portkey-provider": model.split("/")[0], // Get provider from model string (e.g., "openai" from "openai/gpt-4o")
+                    "x-portkey-model": model.split("/")[1], // Get model name from model string (e.g., "gpt-4o" from "openai/gpt-4o")
+                };
+
+                // Add the config parameter if it exists
+                if (portkeyConfig) {
+                    headers["x-portkey-config"] = portkeyConfig;
+                    elizaLogger.debug("Using custom PortKey config", { portkeyConfig });
+                }
+
+                const portkey = createOpenAI({
+                    apiKey,
+                    baseURL: endpoint,
+                    fetch: runtime.fetch,
+                    headers
+                });
+
+                const { text: portkeyResponse } = await aiGenerateText({
+                    model: portkey.languageModel(model),
+                    prompt: context,
+                    system:
+                        runtime.character.system ??
+                        settings.SYSTEM_PROMPT ??
+                        undefined,
+                    tools: tools,
+                    onStepFinish: onStepFinish,
+                    maxSteps: maxSteps,
+                    temperature: temperature,
+                    maxTokens: max_response_length,
+                    frequencyPenalty: frequency_penalty,
+                    presencePenalty: presence_penalty,
+                    experimental_telemetry: experimental_telemetry,
+                });
+
+                response = portkeyResponse;
+                elizaLogger.debug("Received response from PortKey model.");
                 break;
             }
 
@@ -2181,6 +2227,7 @@ export interface GenerationOptions {
     schemaDescription?: string;
     stop?: string[];
     mode?: "auto" | "json" | "tool";
+    modelOptions: ModelSettings;
     experimental_providerMetadata?: Record<string, unknown>;
     // verifiableInference?: boolean;
     // verifiableInferenceAdapter?: IVerifiableInferenceAdapter;
@@ -2302,40 +2349,59 @@ export async function handleProvider(
         case ModelProviderName.NANOGPT:
         case ModelProviderName.AKASH_CHAT_API:
         case ModelProviderName.LMSTUDIO:
+        case ModelProviderName.NEARAI: {
             return await handleOpenAI(options);
+        }
         case ModelProviderName.ANTHROPIC:
-        case ModelProviderName.CLAUDE_VERTEX:
+        case ModelProviderName.CLAUDE_VERTEX: {
             return await handleAnthropic(options);
-        case ModelProviderName.GROK:
+        }
+        case ModelProviderName.GROK: {
             return await handleGrok(options);
-        case ModelProviderName.GROQ:
+        }
+        case ModelProviderName.GROQ: {
             return await handleGroq(options);
-        case ModelProviderName.LLAMALOCAL:
+        }
+        case ModelProviderName.LLAMALOCAL: {
             return await generateObjectDeprecated({
                 runtime,
                 context,
                 modelClass,
             });
-        case ModelProviderName.GOOGLE:
+        }
+        case ModelProviderName.GOOGLE: {
             return await handleGoogle(options);
-        case ModelProviderName.MISTRAL:
+        }
+        case ModelProviderName.MISTRAL: {
             return await handleMistral(options);
-        case ModelProviderName.REDPILL:
+        }
+        case ModelProviderName.REDPILL: {
             return await handleRedPill(options);
-        case ModelProviderName.OPENROUTER:
+        }
+        case ModelProviderName.OPENROUTER: {
             return await handleOpenRouter(options);
-        case ModelProviderName.OLLAMA:
+        }
+        case ModelProviderName.OLLAMA: {
             return await handleOllama(options);
-        case ModelProviderName.DEEPSEEK:
+        }
+        case ModelProviderName.DEEPSEEK: {
             return await handleDeepSeek(options);
-        case ModelProviderName.LIVEPEER:
+        }
+        case ModelProviderName.LIVEPEER: {
             return await handleLivepeer(options);
-        case ModelProviderName.SECRETAI:
+        }
+        case ModelProviderName.SECRETAI: {
             return await handleSecretAi(options);
-        case ModelProviderName.NEARAI:
+        }
+        case ModelProviderName.NEARAI: {
             return await handleNearAi(options);
-        case ModelProviderName.BEDROCK:
+        }
+        case ModelProviderName.BEDROCK: {
             return await handleBedrock(options);
+        }
+        case ModelProviderName.PORTKEY: {
+            return await handlePortKey(options);
+        }
         default: {
             const errorMessage = `Unsupported provider: ${provider}`;
             elizaLogger.error(errorMessage);
@@ -2343,6 +2409,7 @@ export async function handleProvider(
         }
     }
 }
+
 /**
  * Handles object generation for OpenAI.
  *
@@ -2359,7 +2426,7 @@ async function handleOpenAI({
     modelOptions,
     provider,
     runtime,
-}: ProviderOptions): Promise<GenerateObjectResult<unknown>> {
+}: ProviderOptions): Promise<GenerationResult> {
     const endpoint = runtime.character.modelEndpointOverride || getEndpoint(provider);
     const baseURL = getCloudflareGatewayBaseURL(runtime, "openai") || endpoint;
     const openai = createOpenAI({ 
@@ -2406,6 +2473,8 @@ async function handleAnthropic({
         baseURL,
         fetch: runtime.fetch 
     });
+    
+    // Use the appropriate model name format for Anthropic
     return await aiGenerateObject({
         model: anthropic.languageModel(model),
         schema,
@@ -2500,8 +2569,9 @@ async function handleGoogle({
 }: ProviderOptions): Promise<GenerateObjectResult<unknown>> {
     const google = createGoogleGenerativeAI({
         apiKey,
-        fetch: runtime.fetch 
+        fetch: runtime.fetch,
     });
+
     return aiGenerateObject({
         model: google(model),
         schema,
@@ -2781,6 +2851,55 @@ async function handleNearAi({
     const settings = schema ? { structuredOutputs: true } : undefined;
     return aiGenerateObject({
         model: nearai.languageModel(model, settings),
+        schema,
+        schemaName,
+        schemaDescription,
+        mode,
+        ...modelOptions,
+    });
+}
+
+/**
+ * Handles object generation for PortKey models.
+ *
+ * @param {ProviderOptions} options - Options specific to PortKey.
+ * @returns {Promise<GenerateObjectResult<unknown>>} - A promise that resolves to generated objects.
+ */
+async function handlePortKey({
+    model,
+    apiKey,
+    schema,
+    schemaName,
+    schemaDescription,
+    mode = "json",
+    modelOptions,
+    runtime,
+}: ProviderOptions): Promise<GenerationResult> {
+    // PortKey uses OpenAI's API format but routes to different providers
+    const portkeyConfig = runtime.character.clientConfig?.portkey?.config;
+    const headers: Record<string, string> = {
+        "x-portkey-api-key": apiKey,
+        "x-portkey-mode": "fallback", // Enable fallback mode for reliability
+        "x-portkey-provider": model.split("/")[0], // Get provider from model string (e.g., "openai" from "openai/gpt-4o")
+        "x-portkey-model": model.split("/")[1], // Get model name from model string (e.g., "gpt-4o" from "openai/gpt-4o")
+    };
+
+    // Add the config parameter if it exists
+    if (portkeyConfig) {
+        headers["x-portkey-config"] = portkeyConfig;
+        elizaLogger.debug("Using custom PortKey config", { portkeyConfig });
+    }
+
+    const portkey = createOpenAI({
+        apiKey,
+        baseURL: models.portkey.endpoint,
+        fetch: runtime.fetch,
+        headers
+    });
+    
+    // Use the appropriate model name format for PortKey
+    return aiGenerateObject({
+        model: portkey.languageModel(model),
         schema,
         schemaName,
         schemaDescription,
