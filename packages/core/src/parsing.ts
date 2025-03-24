@@ -153,6 +153,11 @@ export function parseJSONObjectFromText(
         } catch (e) {
             console.error("Error parsing JSON:", e);
             console.error("Text is not JSON", text);
+            return {
+                user: "",
+                text: text,
+                action: ""
+            };
             
             // Try to fix nested JSON strings that aren't properly escaped
             try {
@@ -189,6 +194,11 @@ export function parseJSONObjectFromText(
             } catch (e) {
                 console.error("Error parsing JSON:", e);
                 console.error("Text is not JSON", text);
+                return {
+                    user: "",
+                    text: text,
+                    action: ""
+                };
                 
                 // Try to fix nested JSON strings that aren't properly escaped
                 try {

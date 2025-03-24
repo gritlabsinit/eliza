@@ -12,7 +12,7 @@
         },
         "build": {
             "outputs": ["dist/**"],
-            "dependsOn": ["^@elizaos/core#build"]
+            "dependsOn": ["^@gritlab/core#build"]
         },
         "@elizaos/client-direct#build": {
             "outputs": ["dist/**"],
