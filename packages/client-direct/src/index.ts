@@ -28,6 +28,7 @@ import * as path from "path";
 import { z } from "zod";
 import { createApiRouter } from "./api.ts";
 import { createVerifiableLogApiRouter } from "./verifiable-log-api.ts";
+import { authMiddleware } from "./middlewares/auth";
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -123,6 +124,7 @@ export class DirectClient {
         this.app.use(cors());
         this.agents = new Map();
 
+        this.app.use(authMiddleware);
         this.app.use(bodyParser.json());
         this.app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -1054,11 +1056,11 @@ export const DirectClientInterface: Client = {
         client.start(serverPort);
         return client;
     },
-    // stop: async (_runtime: IAgentRuntime, client?: Client) => {
-    //     if (client instanceof DirectClient) {
-    //         client.stop();
-    //     }
-    // },
+//     stop: async (_runtime: IAgentRuntime, client?: Client) => {
+//         if (client instanceof DirectClient) {
+//             client.stop();
+//         }
+//     },
 };
 
 const directPlugin: Plugin = {

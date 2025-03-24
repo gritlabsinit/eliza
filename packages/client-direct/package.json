@@ -1,6 +1,6 @@
 {
-    "name": "@elizaos/client-direct",
-    "version": "0.25.9",
+    "name": "@gritlab/client-direct",
+    "version": "0.1.3",
     "main": "dist/index.js",
     "module": "dist/index.js",
     "type": "module",
