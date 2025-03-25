@@ -51,6 +51,7 @@ const upload = multer({ storage /*: multer.memoryStorage() */ });
 export const messageHandlerTemplate =
     // {{goals}}
     // "# Action Examples" is already included
+    messageCompletionFooter +
     `{{actionExamples}}
 (Action examples are for reference only. Do not use the information from them in your response.)
 
@@ -76,7 +77,7 @@ Note that {{agentName}} is capable of reading/seeing/hearing various forms of me
 {{actions}}
 
 # Instructions: Write the next message for {{agentName}}.
-` + messageCompletionFooter;
+`;
 
 export const hyperfiHandlerTemplate = `{{actionExamples}}
 (Action examples are for reference only. Do not use the information from them in your response.)
@@ -316,7 +317,7 @@ export class DirectClient {
 
                 await runtime.messageManager.createMemory(responseMessage);
 
-                state = await runtime.updateRecentMessageState(state);
+                // state = await runtime.updateRecentMessageState(state);
 
                 let message = null as Content | null;
 
